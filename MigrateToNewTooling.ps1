@@ -109,7 +109,8 @@ foreach ($projectToMigrate in $projectsToMigrate) {
 
     # Create a new project
     Write-Verbose "Creating new project at $projectFolder"
-    & dotnet new --type lib
+    & dotnet new  classlib
+    # Remove dummy Class1.cs file from template
     Remove-Item (Join-Path $projectFolder "Class1.cs")
     $projectPath = (Join-Path $projectFolder (Split-Path $projectFolder -Leaf)) + ".csproj"
     Write-Verbose "Created new project at $projectPath"

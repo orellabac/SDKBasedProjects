@@ -1,4 +1,4 @@
-param(
+ param(
     [Parameter(Mandatory=$true)]
     [string]$TargetFolder
 )
@@ -31,7 +31,7 @@ function CopyProjectReferences($project, $originalProject) {
 function CopyAssemblyReferences($project, $originalProject) {
     $assemblyReferences = $originalProject.Project.ItemGroup.Reference | Where-Object {
         ($_.HintPath -ne $null -and
-         $_.HintPath -notlike "..\packages*") -or
+         $_.HintPath -notlike "*\packages*") -or # packages pattern can be ..\packages or ..\..\..\packages
         ($_.HintPath -eq $null)
     }
     $itemGroup = $project.CreateElement("ItemGroup")
@@ -60,8 +60,22 @@ function SetTargetFramework($project, $originalProject) {
     Write-Verbose "Found target framework version $targetFrameworkVersion"
     if ($targetFrameworkVersion -eq "v4.5.2" -and $targetFrameworkIdentifier -eq $null) {
         $project.Project.PropertyGroup.TargetFramework = "net452"
+        # This will be needed for coverage
+        $debugTypeElement = $project.CreateElement("DebugType")
+        $debugTypeElement.InnerText = "Full"
+        $project.Project.PropertyGroup.AppendChild($debugTypeElement)
         return
-    } elseif ($targetFrameworkVersion -eq "v5.0" -and $targetFrameworkIdentifier -eq "Silverlight") {
+    }
+    elseif ($targetFrameworkVersion -eq "v4.6.1" -and $targetFrameworkIdentifer -eq $null) {
+        $project.Project.PropertyGroup.TargetFramework = "net461"
+        # This will be needed for coverage
+        # This will be needed for coverage
+        $debugTypeElement = $project.CreateElement("DebugType")
+        $debugTypeElement.InnerText = "Full"
+        $project.Project.PropertyGroup.AppendChild($debugTypeElement)
+        return
+    }
+    elseif ($targetFrameworkVersion -eq "v5.0" -and $targetFrameworkIdentifier -eq "Silverlight") {
         $project.Project.PropertyGroup.TargetFramework = "sl50"
         $propertyGroup = $project.CreateElement("PropertyGroup");
         $propertyGroup.SetAttribute("Condition", '''$(TargetFramework)'' == ''sl50''')
@@ -109,8 +123,7 @@ foreach ($projectToMigrate in $projectsToMigrate) {
 
     # Create a new project
     Write-Verbose "Creating new project at $projectFolder"
-    & dotnet new  classlib
-    # Remove dummy Class1.cs file from template
+    & dotnet new classlib
     Remove-Item (Join-Path $projectFolder "Class1.cs")
     $projectPath = (Join-Path $projectFolder (Split-Path $projectFolder -Leaf)) + ".csproj"
     Write-Verbose "Created new project at $projectPath"
@@ -145,4 +158,4 @@ foreach ($projectToMigrate in $projectsToMigrate) {
     # Save the project file
     $project.Save($projectPath)
     Pop-Location
-}
+} 
